@@ -1,47 +1,42 @@
-name: Run Ingestion Agent (Check Run)
+name: Orchestrator PR Check
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [opened, synchronize, reopened]
 
 permissions:
-  checks: write
-  contents: read
-  actions: read
-  issues: write   # optional - if you want to post PR comments later
+  contents: write
+  pull-requests: write
 
 jobs:
-  ingestion:
+  run-orchestrator:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout PR repo (test repo)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Checkout orchestrator repo (your code)
+    steps:
+      - name: Checkout PR Test Repo
+        uses: actions/checkout@v4
+
+      - name: Checkout Orchestrator Repo
         uses: actions/checkout@v4
         with:
-          repository: rohini1504/orchestrator     # <--- change this
+          repository: rohini1504/pr_orchestrator
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: orchestrator
-          fetch-depth: 0
-          token: ${{ secrets.ORCHESTRATOR_ACCESS_TOKEN || github.token }}
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.10'
 
-      - name: Install requirements
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r orchestrator/requirements.txt
+          pip install requests
 
-      - name: Run ingestion check-run
+      - name: Run Ingestion Agent
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_FULL_NAME: ${{ github.repository }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python orchestrator/ingestion_check_run.py
+          python orchestrator/run_ingestion_check.py
+
