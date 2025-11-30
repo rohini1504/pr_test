@@ -1,0 +1,47 @@
+name: Run Ingestion Agent (Check Run)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  checks: write
+  contents: read
+  actions: read
+  issues: write   # optional - if you want to post PR comments later
+
+jobs:
+  ingestion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR repo (test repo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout orchestrator repo (your code)
+        uses: actions/checkout@v4
+        with:
+          repository: rohini1504/orchestrator     # <--- change this
+          path: orchestrator
+          fetch-depth: 0
+          token: ${{ secrets.ORCHESTRATOR_ACCESS_TOKEN || github.token }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r orchestrator/requirements.txt
+
+      - name: Run ingestion check-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_FULL_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python orchestrator/ingestion_check_run.py
